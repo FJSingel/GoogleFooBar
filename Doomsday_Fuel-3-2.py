@@ -3,17 +3,45 @@ from itertools import product
 from fractions import Fraction
 import copy
 
-a = [[3, 0, 2], [2, 0, -2], [0, 1, 1]]
-ad = 0
-b = [[4, 6], [3, 8]]
-bd = 14
-c = [[6, 1, 1], [4, -2, 5], [2, 8, 7]]
-cd = -306
-d = [[6, 1, 1, 0], [4, -2, 5, 0], [2, 8, 7, 0], [0, 0, 1, 2]]
-dd = -612
+# Answer method
+def answer(m):
+    terminal = [0] * len(m)
+    terminal_indexes = [row for row in m if row == terminal]
 
-x = [[1, .66], [0, 1]]
-y = [[.33, 0, 0], [0, .428, .571]]
+    q_size = len(m) - len(terminal_indexes)
+    denominators = []
+
+    for row_index in range(q_size):
+        denominators.append(sum(m[row_index]))
+        for value_index in range(len(m[row_index])):
+            m[row_index][value_index] = Fraction(m[row_index][value_index], denominators[row_index])
+
+    q_matrix = []
+    r_matrix = []
+    for row in m[:q_size]:
+        q_matrix.append(row[:q_size])
+        r_matrix.append(row[q_size:])
+
+    iq = subtract(identity(len(q_matrix)), q_matrix)
+    print "I-Q = {}".format(iq)
+
+    n = invert(iq)
+    print "N = {}".format(n)
+
+    b = mult(n, r_matrix)
+    print "B = {}".format(b)
+
+    denominators = []
+    for fraction in b[0]:
+        denominators.append(fraction.denominator)
+
+    final_answer = []
+    max_denominator = max(denominators)
+    print max_denominator
+    for value in b[0]:
+        final_answer.append((value * max_denominator).numerator)
+    final_answer.append(max_denominator)
+    return final_answer
 
 
 # don't give this a non-square matrix
@@ -81,10 +109,19 @@ def mult(ma, mb):
 # Computes a matrix of minors
 def matrix_minors(m):
     mat_min = copy.deepcopy(m)
-    for x, y in product(range(len(m)), range(len(m))):
-        print "{},{}".format(x, y)
-        print non(x, y, m)
-        mat_min[x][y] = determinant(non(y, x, m))
+
+    if len(m) == 2:
+        mat_min[0][0] = m[1][1]
+        mat_min[1][1] = m[0][0]
+
+        # probs should be negative?
+        mat_min[1][0] = m[0][1]
+        mat_min[0][1] = m[1][0]
+    else:
+        for x, y in product(range(len(m)), range(len(m))):
+            print "{},{}".format(x, y)
+            print non(x, y, m)
+            mat_min[x][y] = determinant(non(y, x, m))
     return mat_min
 
 
@@ -95,14 +132,20 @@ def matrix_coef(m):
     return m
 
 
-#
-def cast_fractions(m):
-    for y in range(len(m)):
-        for x in range(len(m[y])):
-            m[y][x] = Fraction(m[y][x])
-    return m
+# Generate an identity matrix
+def identity(n):
+    identity = []
+    for x in range(n):
+        row = [0] * n
+        row[x] = 1
+        identity.append(row)
+    return identity
 
-print c
-cast_fractions(c)
-print c
-print invert(c)
+
+def subtract(ma, mb):
+    mc = copy.deepcopy(ma)
+    for x, y in product(range(len(ma)), range(len(ma))):
+        mc[x][y] = ma[x][y] - mb[x][y]
+    return mc
+
+print answer(ex2)
