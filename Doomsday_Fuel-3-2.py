@@ -3,10 +3,16 @@ from itertools import product
 from fractions import Fraction
 import copy
 
+
 # Answer method
 def answer(m):
+
+    if len(m) == 1:
+        return [1, 1]
+
     terminal = [0] * len(m)
-    terminal_indexes = [row for row in m if row == terminal]
+    m = preformat(m)
+    terminal_indexes = [x for x in range(len(m)) if m[x] == terminal]
 
     q_size = len(m) - len(terminal_indexes)
     denominators = []
@@ -14,7 +20,7 @@ def answer(m):
     for row_index in range(q_size):
         denominators.append(sum(m[row_index]))
         for value_index in range(len(m[row_index])):
-            m[row_index][value_index] = Fraction(m[row_index][value_index], denominators[row_index])
+            m[row_index][value_index] = Fraction(m[row_index][value_index], denominators[row_index]).limit_denominator()
 
     q_matrix = []
     r_matrix = []
@@ -41,30 +47,56 @@ def answer(m):
     for value in b[0]:
         final_answer.append((value * max_denominator).numerator)
     final_answer.append(max_denominator)
+
+    print "\nAnswer: {}\n".format(final_answer)
     return final_answer
+
+
+# Move all the empty states to the end
+def preformat(m):
+    transformed = copy.deepcopy(m)
+
+    # First row is initial state
+    unsorted = True
+    while unsorted:
+        first_empty_index = -1
+        for first_empty_index in range(1, len(m)):
+            if transformed[first_empty_index] == ([0] * len(m)):
+                break
+        for last_nonempty_index in range(len(m) - 1, -1, -1):
+            if transformed[last_nonempty_index] != ([0] * len(m)):
+                break
+        if first_empty_index > last_nonempty_index:
+            unsorted = False
+        else:
+            # Gotta swap the row
+            temp = transformed[first_empty_index]
+            transformed[first_empty_index] = transformed[last_nonempty_index]
+            transformed[last_nonempty_index] = temp
+            # And now the columns
+            for row in transformed:
+                temp_val = row[first_empty_index]
+                row[first_empty_index] = row[last_nonempty_index]
+                row[last_nonempty_index] = temp_val
+    return transformed
 
 
 # don't give this a non-square matrix
 def determinant(m):
-    mcopy = copy.deepcopy(m)
     if len(m) == 2:
-        return mcopy[0][0] * mcopy[1][1] - mcopy[1][0] * mcopy[0][1]
+        return m[0][0] * m[1][1] - m[1][0] * m[0][1]
     det = 0
     add_or_sub = 1
-    for x in range(len(mcopy)):
-        msub = non(x, 0, mcopy)
-        det += add_or_sub * mcopy[0][x] * determinant(msub)
+    for x in range(len(m)):
+        msub = minor(x, 0, m)
+        det += add_or_sub * m[0][x] * determinant(msub)
         add_or_sub *= -1
     return det
 
 
-# Don't give this len 1 or 2 matrices
-def non(i, j, m):
-    sub = copy.deepcopy(m)
-    del sub[j]
-    for row in range(len(m) - 1):
-        del sub[row][i]
-    return sub
+# removes the row and column intersecting at i,j
+def minor(i, j, m):
+    return [row[:j] + row[j + 1:] for row in (m[:i] + m[i + 1:])]
 
 
 # Invert a square matrix
@@ -119,9 +151,7 @@ def matrix_minors(m):
         mat_min[0][1] = m[1][0]
     else:
         for x, y in product(range(len(m)), range(len(m))):
-            print "{},{}".format(x, y)
-            print non(x, y, m)
-            mat_min[x][y] = determinant(non(y, x, m))
+            mat_min[x][y] = determinant(minor(y, x, m))
     return mat_min
 
 
@@ -147,5 +177,3 @@ def subtract(ma, mb):
     for x, y in product(range(len(ma)), range(len(ma))):
         mc[x][y] = ma[x][y] - mb[x][y]
     return mc
-
-print answer(ex2)
